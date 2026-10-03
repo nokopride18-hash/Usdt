@@ -91,6 +91,61 @@ WALLETS = {
 }
 
 # ============================================================
+# محتوى زر «ما هو FLASH USDT؟»
+# ============================================================
+# اكتب محتوى الزر بين علامتي الاقتباس الثلاثيتين أدناه.
+# يمكنك كتابة عدة أسطر بالعربي والإيموجي بشكل طبيعي.
+# مهم: لا تحذف FLASH_USDT_INFO = ولا علامتي """ في البداية والنهاية،
+# ولا تضع """ أخرى داخل المحتوى نفسه.
+FLASH_USDT_INFO = """  عملات FLASH USDT هي  عملات USDT نظامية ولكن هذه العملات تختفي بعد فترة ثلاث شهور من تاريخ إنتاجها ولكنها تظهر قيمة مطابقة لقيمة عملة ال usdt الأصلية داخل المحافظ والتي تقدر ب 1$ لكل عملة وتباعاً لنظام البوت فإن :
+
+ عند اتمام طلب شراؤك يتم تصنيع عملاتك وارسالهم لك بشكل تلقائي وذلك لان البوت تم ربطه مع Software تصنيع  FLASH USDT الخاص بنا وبهذا يتم التصنيع والارسال بشكل مباشر بمدة لا تتعدى الخمس دقائق .
+
+يجب العلم بأن بعد الشراء يتم إرسال FLASH USDT إلى المحفظة التي أرسلت للبوت عنوانها ويجب تصريف هذه العملات قبل اختفاؤها ( تبقى العملات في المحفظة لمدة ثلاث شهور تماما) ويمكن أن يتم إرسال هذه العملات إلى محافظ اخرى دون وجود أي مشاكل .
+
+أين يمكنني تصريف هذه العملات ؟ يمكنك تصريف هذه العملات في مراكز الصرافة أو متاجر الهواتف التي تعرض تصريف العملات الرقمية ولكن احذر من تصريف كميات كبيرة جداً عند ذات المركز لكي لا تثير الشك و يمكنك ايضا ارسال هذه العملات الى محافظ اشخاص وبيعهم اياها على انها usdt حقيقي ويمكنك ايضا التداول بها في الفوركس او ..... اذ يمكن تداولها داخل منصات MT5 و MT4 وغيرها وعند الربح يمكنك التفريق بين الاموال الحقيقية  و FLASH USDT بان FLASH يختفي تلقائيا من المحفظة بعد ثلاث شهور .
+
+من نحن ؟ شبكة من الأشخاص تعمل لصالح تعاون Ted في اكثر من 4 دول ونظرا لتواجدنا في دول تمنع تصريف ال usdt في المراكز المصرفية قررنا ان نقدمه لحضراتكم بأسعار مخفضة .
+ملاحظات :
+(غير مسؤولين عن تورط احدكم يجب الانتباه والحذر)
+(نحن نعمل في هذه المجالات منذ اكثر من خمس سنوات )
+( فريقنا يقدم خدمات اخرى مثل تزوير جوازات السفر والهويات الشخصية للدول التالية : الأردن _لبنان_سوريا_العراق_مصر_اليمن و تزوير المعاملات الحكومية بشتى انواعها )
+(لا يقتصر عمل فريقنا على هذه الامور فقط ولكن نقدم المزيد والمزيد من الخدمات بعضها يعتبر مشبوها وغير قابل للعرض داخل مجتمعاتكم)
+(لدينا موقع يعرض جميع خدماتنا على Dark web )
+ (سنضيف خدمات تواصل من أجل الخدمات الاخرى قريبا )
+"""
+
+
+# ============================================================
+# أكواد الخصم
+# ============================================================
+# الأكواد حساسة لحالة الأحرف. كل كود يمنح خصم 20%.
+# لا يتم تحويل الكود إلى lowercase أو uppercase.
+DISCOUNT_CODES = {
+    "67f7": 20,
+    "00b1": 20,
+    "50ww": 20,
+    "17ss": 20,
+    "43ks": 20,
+    "29aq": 20,
+    "q66o": 20,
+    "600h": 20,
+    "30ty": 20,
+    "10ap": 20,
+    "11ui": 20,
+    "53vx": 20,
+    "23p6": 20,
+    "m447": 20,
+    "z39a": 20,
+    "qw31": 20,
+    "g908": 20,
+    "vt51": 20,
+    "ro28": 20,
+    "3q3v": 20,
+}
+
+
+# ============================================================
 # قاعدة البيانات
 # ============================================================
 
@@ -114,33 +169,91 @@ def init_db():
                 payment_wallet TEXT NOT NULL,
                 created_at INTEGER NOT NULL,
                 status TEXT NOT NULL,
-                tx_hash TEXT UNIQUE
+                tx_hash TEXT UNIQUE,
+                original_price TEXT,
+                discount_code TEXT,
+                discount_percent INTEGER DEFAULT 0,
+                final_price TEXT
             )
             """
         )
+
+        columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(orders)").fetchall()
+        }
+        migrations = {
+            "original_price": "ALTER TABLE orders ADD COLUMN original_price TEXT",
+            "discount_code": "ALTER TABLE orders ADD COLUMN discount_code TEXT",
+            "discount_percent": "ALTER TABLE orders ADD COLUMN discount_percent INTEGER DEFAULT 0",
+            "final_price": "ALTER TABLE orders ADD COLUMN final_price TEXT",
+        }
+        for column, statement in migrations.items():
+            if column not in columns:
+                conn.execute(statement)
+
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS discount_codes (
+                code TEXT PRIMARY KEY,
+                percent INTEGER NOT NULL,
+                used INTEGER NOT NULL DEFAULT 0,
+                used_by INTEGER,
+                used_order_id TEXT
+            )
+            """
+        )
+
+        for code, percent in DISCOUNT_CODES.items():
+            conn.execute(
+                """
+                INSERT INTO discount_codes (code, percent, used)
+                VALUES (?, ?, 0)
+                ON CONFLICT(code) DO UPDATE SET percent = excluded.percent
+                """,
+                (code, percent),
+            )
+
         conn.commit()
 
 
-def create_order(user_id, network, amount, price, receive_wallet):
+def create_order(
+    user_id,
+    network,
+    amount,
+    original_price,
+    receive_wallet,
+    discount_code=None,
+    discount_percent=0,
+    final_price=None,
+):
     order_id = uuid.uuid4().hex[:10].upper()
+    if final_price is None:
+        final_price = original_price
+
     with db() as conn:
         conn.execute(
             """
             INSERT INTO orders
             (id, telegram_user_id, network, amount, price,
-             receive_wallet, payment_wallet, created_at, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+             receive_wallet, payment_wallet, created_at, status,
+             original_price, discount_code, discount_percent, final_price)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 order_id,
                 user_id,
                 network,
                 amount,
-                price,
+                final_price,
                 receive_wallet,
                 WALLETS[network],
                 int(time.time()),
                 "pending",
+                original_price,
+                discount_code,
+                discount_percent,
+                final_price,
             ),
         )
         conn.commit()
@@ -155,16 +268,54 @@ def get_order(order_id):
 
 
 def confirm_order(order_id, tx_hash):
+    # Confirm payment and consume the discount code atomically.
+    # A code is consumed only after a valid payment is found.
     with db() as conn:
-        conn.execute(
-            """
-            UPDATE orders
-            SET status = 'paid', tx_hash = ?
-            WHERE id = ? AND status = 'pending'
-            """,
-            (tx_hash, order_id),
-        )
-        conn.commit()
+        conn.execute("BEGIN IMMEDIATE")
+
+        order = conn.execute(
+            "SELECT * FROM orders WHERE id = ? AND status = 'pending'",
+            (order_id,),
+        ).fetchone()
+
+        if not order:
+            conn.rollback()
+            return False
+
+        if order["discount_code"]:
+            result = conn.execute(
+                """
+                UPDATE discount_codes
+                SET used = 1, used_by = ?, used_order_id = ?
+                WHERE code = ? AND used = 0
+                """,
+                (
+                    order["telegram_user_id"],
+                    order_id,
+                    order["discount_code"],
+                ),
+            )
+            if result.rowcount != 1:
+                conn.rollback()
+                return False
+
+        try:
+            result = conn.execute(
+                """
+                UPDATE orders
+                SET status = 'paid', tx_hash = ?
+                WHERE id = ? AND status = 'pending'
+                """,
+                (tx_hash, order_id),
+            )
+            if result.rowcount != 1:
+                conn.rollback()
+                return False
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            return False
 
 
 def tx_already_used(tx_hash):
@@ -174,6 +325,39 @@ def tx_already_used(tx_hash):
             (tx_hash,),
         ).fetchone()
         return row is not None
+
+
+def discount_code_status(code):
+    # Exact, case-sensitive comparison. No lower()/upper()/strip().
+    if code not in DISCOUNT_CODES:
+        return "invalid", None
+
+    with db() as conn:
+        row = conn.execute(
+            "SELECT percent, used FROM discount_codes WHERE code = ?",
+            (code,),
+        ).fetchone()
+
+    if not row:
+        return "invalid", None
+    if row["used"]:
+        return "used", None
+    return "valid", int(row["percent"])
+
+
+def discounted_price(price, percent):
+    value = Decimal(price)
+    final = (value * (Decimal(100) - Decimal(percent)) / Decimal(100)).quantize(
+        Decimal("0.01")
+    )
+    return format(final, "f")
+
+
+def price_display(price):
+    value = Decimal(str(price))
+    if value == value.to_integral():
+        return f"{value:.0f}"
+    return f"{value:.2f}"
 
 
 # ============================================================
@@ -186,6 +370,8 @@ def main_menu():
             [InlineKeyboardButton("🛒 شراء FLASH USDT", callback_data="buy")],
             [InlineKeyboardButton("💰 الأسعار والباقات", callback_data="prices")],
             [InlineKeyboardButton("🎁 العروض والخصومات", callback_data="offers")],
+            [InlineKeyboardButton("ℹ️ ما هو FLASH USDT؟", callback_data="info")],
+            [InlineKeyboardButton("🎟️ هل لديك كود خصم؟", callback_data="discount")],
         ]
     )
 
@@ -435,7 +621,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await update.message.reply_text(
-        "👋 <b>أهلاً بك في FLASH USDT</b>\n\n"
+        "👋 <b>أهلاً بك في متجر FLASH USDT</b>\n\n"
         "اختر من القائمة التالية 👇",
         parse_mode="HTML",
         reply_markup=main_menu(),
@@ -450,6 +636,55 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
 
+    # --------------------------------------------------------
+    # إدخال كود الخصم
+    # --------------------------------------------------------
+    if context.user_data.get("awaiting_discount_code"):
+        code = update.message.text
+
+        # Exact, case-sensitive comparison. No lower()/upper()/strip().
+        status, percent = discount_code_status(code)
+        context.user_data.pop("awaiting_discount_code", None)
+
+        if status == "invalid":
+            await update.message.reply_text(
+                "❌ <b>كود الخصم غير صحيح.</b>\n\n"
+                "تأكد من إدخال الكود كما استلمته، مع مراعاة الأحرف الكبيرة والصغيرة.",
+                parse_mode="HTML",
+                reply_markup=home_button(),
+            )
+            return
+
+        if status == "used":
+            await update.message.reply_text(
+                "❌ <b>كود الخصم مستخدم مسبقًا.</b>\n\n"
+                "يرجى استخدام كود خصم آخر.",
+                parse_mode="HTML",
+                reply_markup=home_button(),
+            )
+            return
+
+        context.user_data["discount_code"] = code
+        context.user_data["discount_percent"] = percent
+
+        await update.message.reply_text(
+            "✅ <b>تم تفعيل كود الخصم بنجاح!</b>\n\n"
+            f"🎟️ <b>الكود:</b> <code>{escape(code)}</code>\n"
+            f"🎉 <b>نسبة الخصم:</b> {percent}%\n\n"
+            "يمكنك الآن اختيار الباقة التي تريدها، وسيتم تطبيق الخصم على سعرها تلقائيًا.",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [InlineKeyboardButton("🛒 شراء FLASH USDT", callback_data="buy")],
+                    [InlineKeyboardButton("🏠 الرئيسية", callback_data="home")],
+                ]
+            ),
+        )
+        return
+
+    # --------------------------------------------------------
+    # إدخال محفظة الاستلام
+    # --------------------------------------------------------
     network = context.user_data.get("awaiting_wallet_network")
     package = context.user_data.get("pending_package")
 
@@ -465,14 +700,36 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    amount, price = package
+    amount, original_price = package
+
+    discount_code = context.user_data.get("discount_code")
+    discount_percent = int(context.user_data.get("discount_percent", 0) or 0)
+
+    if discount_code:
+        status, current_percent = discount_code_status(discount_code)
+        if status != "valid":
+            context.user_data.pop("discount_code", None)
+            context.user_data.pop("discount_percent", None)
+            await update.message.reply_text(
+                "❌ <b>تعذر تطبيق كود الخصم.</b>\n\n"
+                "قد يكون الكود مستخدمًا بالفعل أو غير صالح.",
+                parse_mode="HTML",
+                reply_markup=home_button(),
+            )
+            return
+        discount_percent = current_percent
+
+    final_price = discounted_price(original_price, discount_percent)
 
     order_id = create_order(
         update.effective_user.id,
         network,
         amount,
-        price,
+        original_price,
         wallet,
+        discount_code,
+        discount_percent,
+        final_price,
     )
 
     context.user_data.pop("awaiting_wallet_network", None)
@@ -480,15 +737,26 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["order_id"] = order_id
 
     payment_wallet = WALLETS[network]
+    price_text = price_display(original_price)
+    final_price_text = price_display(final_price)
+
+    discount_line = ""
+    if discount_code:
+        discount_line = (
+            f"🎟️ <b>كود الخصم:</b> <code>{escape(discount_code)}</code>\n"
+            f"🏷️ <b>الخصم:</b> {discount_percent}%\n"
+            f"💵 <b>السعر بعد الخصم:</b> {final_price_text}$\n\n"
+        )
 
     text = (
         "🧾 <b>تفاصيل الطلب</b>\n\n"
         "🪙 <b>المنتج:</b> FLASH USDT\n"
         f"🌐 <b>الشبكة:</b> {network}\n"
         f"💰 <b>الكمية:</b> {amount} FLASH USDT\n"
-        f"💵 <b>السعر:</b> {price}$\n\n"
-        f"💳 <b>مبلغ الدفع:</b> {price} USDT\n"
-        f"🔸 <b>يجب إرسال {price} USDT عبر شبكة {network} فقط.</b>\n\n"
+        f"💵 <b>السعر الأصلي:</b> {price_text}$\n"
+        f"{discount_line}"
+        f"💳 <b>مبلغ الدفع:</b> {final_price_text} USDT\n"
+        f"🔸 <b>يجب إرسال {final_price_text} USDT عبر شبكة {network} فقط.</b>\n\n"
         "👛 <b>محفظة الاستلام:</b>\n"
         f"<code>{escape(wallet)}</code>\n\n"
         "💳 <b>عنوان الدفع:</b>\n"
@@ -509,7 +777,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=keyboard,
     )
 
-
 # ============================================================
 # الأزرار
 # ============================================================
@@ -523,9 +790,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data or ""
 
     if data == "home":
+        saved_discount_code = context.user_data.get("discount_code")
+        saved_discount_percent = context.user_data.get("discount_percent")
         context.user_data.clear()
+        if saved_discount_code:
+            context.user_data["discount_code"] = saved_discount_code
+            context.user_data["discount_percent"] = saved_discount_percent
         await query.edit_message_text(
-            "👋 <b>أهلاً بك في FLASH USDT</b>\n\n"
+            "👋 <b>أهلاً بك في متجر FLASH USDT</b>\n\n"
             "اختر من القائمة التالية 👇",
             parse_mode="HTML",
             reply_markup=main_menu(),
@@ -533,7 +805,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if data == "buy":
+        saved_discount_code = context.user_data.get("discount_code")
+        saved_discount_percent = context.user_data.get("discount_percent")
         context.user_data.clear()
+        if saved_discount_code:
+            context.user_data["discount_code"] = saved_discount_code
+            context.user_data["discount_percent"] = saved_discount_percent
         await query.edit_message_text(
             "🛒 <b>شراء FLASH USDT</b>\n\n"
             "اختر الشبكة التي تريدها 👇",
@@ -574,6 +851,44 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("🛒 شراء FLASH USDT", callback_data="buy")],
                     [InlineKeyboardButton("🏠 الرئيسية", callback_data="home")],
                 ]
+            ),
+        )
+        return
+
+    if data == "info":
+        info_content = FLASH_USDT_INFO.strip()
+
+        if not info_content:
+            info_text = (
+                "ℹ️ <b>ما هو FLASH USDT؟</b>\n\n"
+                "لم تتم إضافة محتوى هذا القسم بعد."
+            )
+        else:
+            info_text = (
+                "ℹ️ <b>ما هو FLASH USDT؟</b>\n\n"
+                f"{escape(info_content)}"
+            )
+
+        await query.edit_message_text(
+            info_text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [InlineKeyboardButton("🛒 شراء FLASH USDT", callback_data="buy")],
+                    [InlineKeyboardButton("🏠 الرئيسية", callback_data="home")],
+                ]
+            ),
+        )
+        return
+
+    if data == "discount":
+        context.user_data["awaiting_discount_code"] = True
+        await query.edit_message_text(
+            "🎟️ <b>هل لديك كود خصم؟</b>\n\n"
+            "أرسل كود الخصم الآن كما استلمته، مع مراعاة الأحرف الكبيرة والصغيرة.",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("🏠 الرئيسية", callback_data="home")]]
             ),
         )
         return
@@ -639,6 +954,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         if order["status"] == "paid":
+            context.user_data.pop("discount_code", None)
+            context.user_data.pop("discount_percent", None)
             await query.edit_message_text(
                 "✅ <b>تم تأكيد الدفع بنجاح!</b>\n\n"
                 f"💰 <b>الكمية:</b> {order['amount']} FLASH USDT\n\n"
@@ -670,7 +987,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        confirm_order(order_id, tx_hash)
+        if not confirm_order(order_id, tx_hash):
+            await query.edit_message_text(
+                "❌ <b>تعذر تأكيد الطلب.</b>\n\n"
+                "قد تكون عملية الدفع أو كود الخصم قد تم تأكيده مسبقًا.\n"
+                "يرجى المحاولة مرة أخرى.",
+                parse_mode="HTML",
+                reply_markup=home_button(),
+            )
+            return
+
+        context.user_data.pop("discount_code", None)
+        context.user_data.pop("discount_percent", None)
 
         await query.edit_message_text(
             "✅ <b>تم تأكيد الدفع بنجاح!</b>\n\n"
